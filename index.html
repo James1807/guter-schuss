@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000">
+  <title>Guter Schuss</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin:0; width:100%; height:100%; background:#000; overflow:hidden;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    .player { position:relative; width:100vw; height:100dvh; background:#000;
+      display:flex; align-items:center; justify-content:center; }
+    video { width:100%; height:100%; object-fit:contain; display:block; background:#000; }
+    button { -webkit-tap-highlight-color:transparent; cursor:pointer; }
+    .start {
+      position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+      border:0; border-radius:999px; padding:18px 30px; background:rgba(255,255,255,.96);
+      color:#111; font-size:20px; font-weight:700; box-shadow:0 8px 30px rgba(0,0,0,.5);
+    }
+    .controls {
+      position:absolute; left:0; right:0; bottom:0; padding:14px max(16px, env(safe-area-inset-right))
+        max(18px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      display:flex; align-items:center; gap:12px;
+      background:linear-gradient(transparent, rgba(0,0,0,.78));
+      opacity:0; transition:opacity .2s;
+    }
+    .player.active .controls, .controls:hover { opacity:1; }
+    .control {
+      border:0; border-radius:50%; width:46px; height:46px; flex:0 0 46px;
+      background:rgba(255,255,255,.9); color:#111; font-size:20px; display:grid; place-items:center;
+    }
+    .progress { flex:1; height:5px; accent-color:white; }
+    .time { color:white; font-size:13px; min-width:40px; text-align:right; }
+    .hidden { display:none !important; }
+  </style>
+</head>
+<body>
+  <main class="player" id="player">
+    <video id="video" playsinline preload="metadata">
+      <source src="video.mp4" type="video/mp4">
+      Dein Browser kann dieses Video leider nicht abspielen.
+    </video>
+
+    <button id="start" class="start" type="button">▶ Video starten</button>
+
+    <div class="controls" id="controls">
+      <button id="toggle" class="control" type="button" aria-label="Video pausieren">❚❚</button>
+      <span id="time" class="time">0:00</span>
+      <input id="progress" class="progress" type="range" min="0" max="100" value="0" step="0.1" aria-label="Videoposition">
+    </div>
+  </main>
+
+  <script>
+    const video = document.getElementById("video");
+    const player = document.getElementById("player");
+    const start = document.getElementById("start");
+    const toggle = document.getElementById("toggle");
+    const progress = document.getElementById("progress");
+    const time = document.getElementById("time");
+
+    function formatTime(s) {
+      s = Math.max(0, Math.floor(s || 0));
+      return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0");
+    }
+    function showControls() {
+      player.classList.add("active");
+      clearTimeout(window.hideTimer);
+      window.hideTimer = setTimeout(() => player.classList.remove("active"), 2500);
+    }
+    async function startVideo() {
+      try {
+        video.muted = false;
+        video.volume = 1;
+        await video.play();
+        start.classList.add("hidden");
+        toggle.textContent = "❚❚";
+        toggle.setAttribute("aria-label","Video pausieren");
+        showControls();
+      } catch(e) {}
+    }
+    start.addEventListener("click", startVideo);
+
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (video.paused) {
+        video.play();
+        toggle.textContent = "❚❚";
+        toggle.setAttribute("aria-label","Video pausieren");
+      } else {
+        video.pause();
+        toggle.textContent = "▶";
+        toggle.setAttribute("aria-label","Video abspielen");
+      }
+      showControls();
+    });
+
+    video.addEventListener("click", () => {
+      if (video.paused) video.play();
+      else video.pause();
+      toggle.textContent = video.paused ? "▶" : "❚❚";
+      showControls();
+    });
+
+    video.addEventListener("timeupdate", () => {
+      progress.value = video.duration ? (video.currentTime / video.duration) * 100 : 0;
+      time.textContent = formatTime(video.currentTime);
+    });
+
+    progress.addEventListener("input", () => {
+      if (video.duration) video.currentTime = (progress.value / 100) * video.duration;
+      showControls();
+    });
+
+    video.addEventListener("ended", () => {
+      toggle.textContent = "▶";
+      start.textContent = "↻ Nochmal abspielen";
+      start.classList.remove("hidden");
+      showControls();
+    });
+
+    player.addEventListener("touchstart", showControls, {passive:true});
+  </script>
+</body>
+</html>
